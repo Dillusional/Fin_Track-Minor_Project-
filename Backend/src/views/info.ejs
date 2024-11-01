@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Info</title>
+    <link rel="stylesheet" href="/path/to/your/css/style.css"> <!-- Update with your CSS path -->
+</head>
+<body>
+    <h1>User Information</h1>
+    <div>
+        <h2>Username: <%= user.username %></h2>
+        <h2>Email: <%= user.email %></h2>
+        <h2>Full Name: <%= user.fullName %></h2>
+        <h2>FinCoin: <%= user.finCoin %></h2>
+        <h2>Account Created: <%= user.createdAt.toDateString() %></h2>
+    </div>
+
+    <!-- Logout Button Form -->
+    <form action="/api/v1/users/logout" method="POST" style="display:inline;">
+        <button type="submit">Logout</button>
+    </form>
+</body>
+</html>

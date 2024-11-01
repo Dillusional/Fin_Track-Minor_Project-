@@ -67,7 +67,53 @@ const registerUser = asyncHandler(async(req,res)=>{
     )
 })
 
-const loginUser = asyncHandler(async(req,res)=>{
+const loginUser = asyncHandler(async (req, res) => {
+    // Destructure the request body
+    const { email, username, password } = req.body;
+
+    // Check if username or email is provided
+    if (!username && !email) {
+        throw new ApiError(400, "Username or Email is Required");
+    }
+
+    // Find the user by username or email
+    const user = await User.findOne({
+        $or: [{ username }, { email }]
+    });
+
+    // Check if user exists
+    if (!user) {
+        throw new ApiError(404, "User does not Exist");
+    }
+
+    // Verify the password
+    const isPasswordValid = await user.isPasswordCorrect(password);
+    if (!isPasswordValid) {
+        throw new ApiError(401, "Invalid user Credentials");
+    }
+
+    // Generate access and refresh tokens
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
+
+    // Select the user details to be sent back (excluding password and refreshToken)
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+
+    // Options for cookies
+    const options = {
+        httpOnly: true,
+        secure: true
+    };
+
+    // Set the cookies for access and refresh tokens
+    res.cookie("accessToken", accessToken, options);
+    res.cookie("refreshToken", refreshToken, options);
+
+    // Redirect to the info page after login
+    return res.redirect('/api/v1/users/info'); // Adjust the URL to your info page
+});
+//old code below
+
+/*const loginUser = asyncHandler(async(req,res)=>{
     //req body -> data
     //username or email
     //find the user
@@ -117,7 +163,35 @@ const loginUser = asyncHandler(async(req,res)=>{
 
 })
 
-const logoutUser = asyncHandler(async(req,res)=>{
+*/
+
+    const logoutUser = asyncHandler(async (req, res) => {
+        await User.findByIdAndUpdate(
+            req.user._id,
+            {
+                $set: {
+                    refreshToken: undefined
+                }
+            },
+            {
+                new: true
+            }
+        );
+    
+        const options = {
+            httpOnly: true,
+            secure: true
+        };
+    
+        // Clear the cookies
+        res.clearCookie("accessToken", options);
+        res.clearCookie("refreshToken", options);
+    
+        // Redirect to the login page
+        return res.redirect('/api/v1/users/login'); // Adjust this URL if your login page has a different route
+    });
+//old code below
+    /*const logoutUser = asyncHandler(async(req,res)=>{
     await User.findByIdAndUpdate(
         req.user._id,
         {
@@ -142,8 +216,8 @@ const logoutUser = asyncHandler(async(req,res)=>{
     .json(
         new ApiResponse(200,{},"User Logged Out")
     )
-})
-
+}) */
+    
 const refreshAccessToken= asyncHandler(async(req,res)=>{
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
 
@@ -244,6 +318,24 @@ const updateAccountDetails = asyncHandler(async(req,res)=>{
     return res.status(200)
     .json(new ApiResponse(200,user,"Account details Updated Successfully"))
 })
+
+const getUserInfo = asyncHandler(async (req, res) => {
+    const userDetails = await UserModel.findById(req.user._id); // Fetch user details from the database
+
+    if (!userDetails) {
+        return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+        username: userDetails.username,
+        email: userDetails.email,
+        fullName: userDetails.fullName,
+        finCoin: userDetails.finCoin,
+        createdAt: userDetails.createdAt,
+    });
+});
+
+
 export {
     registerUser,
     loginUser,
@@ -251,5 +343,6 @@ export {
     refreshAccessToken,
     changeCurrentPassword,
     getCurrentUser,
-    updateAccountDetails
+    updateAccountDetails,
+    getUserInfo,
 }

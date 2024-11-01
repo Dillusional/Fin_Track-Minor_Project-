@@ -33,4 +33,6 @@ app.use("/api/v1/landing",landingRouter)
 app.use("/api/v1/users",userRouter)
 //http://localhost:8000/users/register
 
+app.use(express.static(path.join(__dirname, '../frontend'))); 
+
 export {app}
